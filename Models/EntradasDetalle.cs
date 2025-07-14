@@ -6,7 +6,7 @@ namespace Ramon_Lopez_AP1_P2.Models;
 public class EntradasDetalle
 {
     [Key]
-    public int VentaDetalleId { get; set; }
+    public int EntradasDetalleId { get; set; }
 
     public int EntradaId { get; set; }
 
