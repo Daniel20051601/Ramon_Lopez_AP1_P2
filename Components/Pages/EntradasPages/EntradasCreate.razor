@@ -186,11 +186,19 @@
                 return;
             }
 
+            if (producto.Existencia < CantidadSeleccionada)
+            {
+                ToastService.ShowWarning("No hay suficiente existencia para este producto.");
+                return;
+            }
+
             Entrada.EntradasDetalle.Add(new EntradasDetalle
             {
                 ProductoId = producto.ProductoId,
                 Cantidad = CantidadSeleccionada
             });
+
+            producto.Existencia -= CantidadSeleccionada; 
 
             CalcularPesoTotal();
         }
