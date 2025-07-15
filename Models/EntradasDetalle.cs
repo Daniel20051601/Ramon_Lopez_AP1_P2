@@ -21,5 +21,5 @@ public class EntradasDetalle
 
     [Required(ErrorMessage = "Debe agregar cantidad")]
     public int Cantidad { get; set; }
-    public decimal PesoTotal { get; set; }
+    
 }
