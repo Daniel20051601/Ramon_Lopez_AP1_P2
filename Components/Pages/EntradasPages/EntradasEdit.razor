@@ -1,0 +1,257 @@
+﻿@page "/Entradas/Edit/{EntradaId:int}"
+@rendermode InteractiveServer
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject EntradasService EntradasService
+
+<PageTitle>Editar Entrada</PageTitle>
+
+<EditForm Model="Entrada" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="container">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-center align-items-center p-3 bg-primary text-white">
+                <h5 class="card-title">Editar Entrada</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label">Entrada Id</label>
+                    <InputNumber class="form-control" @bind-Value="Entrada.EntradaId" Disabled="true" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Fecha</label>
+                    <InputDate class="form-control" @bind-Value="Entrada.Fecha" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Concepto</label>
+                    <InputText class="form-control" @bind-Value="Entrada.Concepto" maxlength="500" />
+                    <ValidationMessage For="@(() => Entrada.Concepto)" class="text-danger" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Peso Total</label>
+                    <input class="form-control" value="@Entrada.PesoTotal.ToString("N2")" disabled />
+                </div>
+
+                <div class="mt-4 border border-success p-2">
+                    <label class="form-label">Utilizados</label>
+                    <div class="row mt-1">
+                        <div class="col-4">
+                            <small>Producto</small>
+                        </div>
+                        <div class="col-3">
+                            <small>Cantidad</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <InputSelect class="form-select" @bind-Value="productoSeleccionado">
+                                <option value="0">Seleccione un producto</option>
+                                @foreach (var prod in Productos)
+                                {
+                                    <option value="@prod.ProductoId">@prod.Descripcion</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-3">
+                            <InputNumber class="form-control" @bind-Value="CantidadSeleccionada" />
+                        </div>
+                        <div class="col-3">
+                            <button class="btn btn-outline-primary" type="button" @onclick="agregarProducto">Agregar</button>
+                        </div>
+                    </div>
+                    <div>
+                        <table class="table table-striped mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Peso Unitario</th>
+                                    <th>Peso Parcial</th>
+                                    <th>Eliminar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var detalle in Entrada.EntradasDetalle)
+                                {
+                                    var producto = Productos.FirstOrDefault(p => p.ProductoId == detalle.ProductoId);
+                                    <tr>
+                                        <td>@producto?.Descripcion</td>
+                                        <td>@detalle.Cantidad</td>
+                                        <td>@producto?.Peso.ToString("N2") kg</td>
+                                        <td>@(((producto?.Peso ?? 0) * detalle.Cantidad).ToString("N2")) kg</td>
+                                        <td>
+                                            <button class="btn btn-outline-danger" type="button" @onclick="() => EliminarDetalle(detalle)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-center">
+                <div class="btn-group" role="group">
+                    <a class="btn btn-outline-secondary" href="/Entradas/Index">Volver</a>
+                    <button type="submit" class="btn btn-outline-success">Guardar</button>
+                    <button type="button" class="btn btn-outline-danger" @onclick="() => mostrarModalEliminar = true"><i class="bi bi-trash"></i> Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@if (mostrarModalEliminar)
+{
+    <div class="modal fade show d-block bg-opacity-50" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" @onclick="() => mostrarModalEliminar = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de que desea eliminar esta entrada de forma permanente?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => mostrarModalEliminar = false">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="EliminarEntrada">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int EntradaId { get; set; }
+
+    public Entradas Entrada { get; set; } = new Entradas
+    {
+        Fecha = DateTime.UtcNow,
+        Concepto = string.Empty,
+        PesoTotal = 0,
+        EntradasDetalle = new List<EntradasDetalle>()
+    };
+    public List<Productos> Productos { get; set; } = new List<Productos>();
+
+    public int productoSeleccionado { get; set; }
+    public int CantidadSeleccionada { get; set; } = 1;
+
+    public bool mostrarModalEliminar = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Entrada = await EntradasService.Buscar(EntradaId) ?? new Entradas
+        {
+            Fecha = DateTime.UtcNow,
+            Concepto = string.Empty,
+            PesoTotal = 0,
+            EntradasDetalle = new List<EntradasDetalle>()
+        };
+        Productos = await EntradasService.ListarProductos();
+
+        if (Entrada.EntradasDetalle == null)
+            Entrada.EntradasDetalle = new List<EntradasDetalle>();
+
+        CalcularPesoTotal();
+    }
+
+    public async Task Guardar()
+    {
+        Entrada.Fecha = DateTime.SpecifyKind(Entrada.Fecha, DateTimeKind.Utc);
+
+        if (string.IsNullOrWhiteSpace(Entrada.Concepto))
+        {
+            ToastService.ShowWarning("Debe agregar un concepto.");
+            return;
+        }
+
+        if (Entrada.EntradasDetalle == null || !Entrada.EntradasDetalle.Any())
+        {
+            ToastService.ShowWarning("Debe agregar al menos un insumo a la entrada.");
+            return;
+        }
+
+        CalcularPesoTotal();
+
+        var resultado = await EntradasService.Guardar(Entrada);
+
+        if (resultado)
+        {
+            ToastService.ShowSuccess("Entrada actualizada correctamente.");
+            NavigationManager.NavigateTo("/Entradas/Index");
+        }
+        else
+        {
+            ToastService.ShowError("Ocurrió un error al actualizar la entrada.");
+        }
+    }
+
+    public void agregarProducto()
+    {
+        var producto = Productos.FirstOrDefault(p => p.ProductoId == productoSeleccionado);
+        if (producto != null && CantidadSeleccionada > 0)
+        {
+            if (Entrada.EntradasDetalle.Any(d => d.ProductoId == producto.ProductoId))
+            {
+                ToastService.ShowWarning("Este producto ya fue agregado.");
+                return;
+            }
+
+            if (producto.Existencia < CantidadSeleccionada)
+            {
+                ToastService.ShowWarning("No hay suficiente existencia para este producto.");
+                return;
+            }
+
+            Entrada.EntradasDetalle.Add(new EntradasDetalle
+            {
+                ProductoId = producto.ProductoId,
+                Cantidad = CantidadSeleccionada
+            });
+            producto.Existencia -= CantidadSeleccionada;
+
+            CalcularPesoTotal();
+        }
+        productoSeleccionado = 0;
+        CantidadSeleccionada = 1;
+    }
+
+    public void EliminarDetalle(EntradasDetalle detalle)
+    {
+        var producto = Productos.FirstOrDefault(p => p.ProductoId == detalle.ProductoId);
+        if (producto != null)
+        {
+            producto.Existencia += detalle.Cantidad;
+        }
+        Entrada.EntradasDetalle.Remove(detalle);
+        CalcularPesoTotal();
+    }
+
+    public async Task EliminarEntrada()
+    {
+        var resultado = await EntradasService.Eliminar(Entrada.EntradaId);
+        mostrarModalEliminar = false;
+        if (resultado)
+        {
+            ToastService.ShowSuccess("Entrada eliminada correctamente.");
+            NavigationManager.NavigateTo("/Entradas/Index");
+        }
+        else
+        {
+            ToastService.ShowError("Ocurrió un error al eliminar la entrada.");
+        }
+    }
+
+    private void CalcularPesoTotal()
+    {
+        Entrada.PesoTotal = Entrada.EntradasDetalle.Sum(d =>
+        {
+            var producto = Productos.FirstOrDefault(p => p.ProductoId == d.ProductoId);
+            return (producto?.Peso ?? 0) * d.Cantidad;
+        });
+    }
+}

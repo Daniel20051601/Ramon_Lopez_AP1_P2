@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Ramon_Lopez_AP1_P2.Dal;
@@ -11,9 +12,11 @@ using Ramon_Lopez_AP1_P2.Dal;
 namespace Ramon_Lopez_AP1_P2.Migrations
 {
     [DbContext(typeof(Contexto))]
-    partial class ContextoModelSnapshot : ModelSnapshot
+    [Migration("20250714231626_AgregaCampos")]
+    partial class AgregaCampos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,37 +33,25 @@ namespace Ramon_Lopez_AP1_P2.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntradaId"));
 
-                    b.Property<int>("CantidadProducida")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Concepto")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("IdProducido")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PesoTotal")
-                        .HasColumnType("decimal(10,2)");
-
                     b.HasKey("EntradaId");
-
-                    b.HasIndex("IdProducido");
 
                     b.ToTable("Entradas");
                 });
 
             modelBuilder.Entity("Ramon_Lopez_AP1_P2.Models.EntradasDetalle", b =>
                 {
-                    b.Property<int>("EntradasDetalleId")
+                    b.Property<int>("VentaDetalleId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntradasDetalleId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VentaDetalleId"));
 
                     b.Property<int>("Cantidad")
                         .HasColumnType("integer");
@@ -68,10 +59,13 @@ namespace Ramon_Lopez_AP1_P2.Migrations
                     b.Property<int>("EntradaId")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("PesoTotal")
+                        .HasColumnType("numeric");
+
                     b.Property<int>("ProductoId")
                         .HasColumnType("integer");
 
-                    b.HasKey("EntradasDetalleId");
+                    b.HasKey("VentaDetalleId");
 
                     b.HasIndex("EntradaId");
 
@@ -90,8 +84,7 @@ namespace Ramon_Lopez_AP1_P2.Migrations
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("EsCompuesto")
                         .HasColumnType("boolean");
@@ -105,67 +98,6 @@ namespace Ramon_Lopez_AP1_P2.Migrations
                     b.HasKey("ProductoId");
 
                     b.ToTable("Productos");
-
-                    b.HasData(
-                        new
-                        {
-                            ProductoId = 1,
-                            Descripcion = "Maní",
-                            EsCompuesto = false,
-                            Existencia = 100m,
-                            Peso = 10.00m
-                        },
-                        new
-                        {
-                            ProductoId = 2,
-                            Descripcion = "Pistachos",
-                            EsCompuesto = false,
-                            Existencia = 100m,
-                            Peso = 5.00m
-                        },
-                        new
-                        {
-                            ProductoId = 3,
-                            Descripcion = "Almendras",
-                            EsCompuesto = false,
-                            Existencia = 100m,
-                            Peso = 20.00m
-                        },
-                        new
-                        {
-                            ProductoId = 4,
-                            Descripcion = "Frutos Mixtos 200gr",
-                            EsCompuesto = true,
-                            Existencia = 0m,
-                            Peso = 200.00m
-                        },
-                        new
-                        {
-                            ProductoId = 5,
-                            Descripcion = "Frutos Mixtos 400gr",
-                            EsCompuesto = true,
-                            Existencia = 0m,
-                            Peso = 400.00m
-                        },
-                        new
-                        {
-                            ProductoId = 6,
-                            Descripcion = "Frutos Mixtos 600gr",
-                            EsCompuesto = true,
-                            Existencia = 0m,
-                            Peso = 600.00m
-                        });
-                });
-
-            modelBuilder.Entity("Ramon_Lopez_AP1_P2.Models.Entradas", b =>
-                {
-                    b.HasOne("Ramon_Lopez_AP1_P2.Models.Productos", "ProductoProducido")
-                        .WithMany()
-                        .HasForeignKey("IdProducido")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ProductoProducido");
                 });
 
             modelBuilder.Entity("Ramon_Lopez_AP1_P2.Models.EntradasDetalle", b =>

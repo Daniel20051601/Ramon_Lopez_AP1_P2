@@ -1,0 +1,166 @@
+﻿@page "/Entradas/Index"
+@using System.Linq.Expressions
+@rendermode InteractiveServer
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject EntradasService EntradasService
+
+<PageTitle>Registro de Entradas</PageTitle>
+
+<div class="container">
+    <div class="card shadow-lg">
+        <div class="card-header d-flex justify-content-center align-items-center p-3">
+            <h4 class="card-title mb-0">Consulta de Entradas</h4>
+        </div>
+        <div class="card-body">
+
+            <div class="row">
+                <div class="col-3">
+                    <label class="col-form-label"><strong>Filtrar por</strong></label>
+                </div>
+                <div class="col text-end">
+                    <a href="/Entrada/Create" class="btn btn-success">
+                        <span class="bi bi-plus-square"></span> Crear
+                    </a>
+                </div>
+            </div>
+
+            <div class="row align-items-center mb-3">
+                <div class="col-3">
+                    <InputSelect class="form-select" @bind-Value="filtro">
+                        <option value="Id">Entrada Id</option>
+                        <option value="Concepto">Concepto</option>
+                    </InputSelect>
+                </div>
+                <div class="col-4">
+                    <div class="input-group">
+                        <input class="form-control"
+                               placeholder="Buscar" @bind-value="ValorFiltro" />
+                        <button type="button" class="btn btn-primary" @onclick="Filtrar">
+                            <i class="bi bi-search me-1"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <div class="row mt-3">
+                        <div class="col-3 d-flex align-items-center mb-3">
+                            <label for="fechaDesde" class="form-label me-2"><strong>Desde</strong></label>
+                            <InputDate class="form-control" id="fechaDesde" @bind-Value="fechaDesde" />
+                        </div>
+
+                        <div class="col-3 d-flex align-items-center mb-3 ms-4">
+                            <label for="fechaHasta" class="form-label me-2"><strong>Hasta</strong></label>
+                            <InputDate class="form-control" id="fechaHasta" @bind-Value="fechaHasta" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <table class="table table-hover">
+                <thead class="table table-striped text-black">
+                    <tr>
+                        <th>Entrada Id</th>
+                        <th>Concepto</th>
+                        <th>Fecha</th>
+                        <th class="text-end pe-5">Peso</th>
+                        <th>Editar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entrada in Entradas)
+                    {
+                        <tr>
+                            <td>@entrada.EntradaId</td>
+                            <td>@entrada.Concepto</td>
+                            <td>@entrada.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td class="text-end pe-5">@entrada.PesoTotal.ToString("N2") kg</td>
+                            <td>
+                                <a href="/Entradas/Edit/@entrada.EntradaId" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="card-footer d-flex justify-content-between pb-0">
+                <div class="col-auto text-center">
+                    <label class="form-label">Conteo: @conteo</label>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label">Total Peso: @totalPeso.ToString("N2") kg</label>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Entradas> Entradas = new List<Entradas>();
+    private string filtro = "Id";
+    private string ValorFiltro { get; set; } = string.Empty;
+
+    private decimal totalPeso = 0;
+    private int conteo = 0;
+
+    DateTime? fechaDesde { get; set; }
+    DateTime? fechaHasta { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Entradas = await EntradasService.Listar(e => true);
+        conteo = Entradas.Count;
+        totalPeso = Entradas.Sum(e => e.PesoTotal);
+    }
+
+    public async Task Filtrar()
+    {
+        try
+        {
+            Expression<Func<Entradas, bool>> criterio = e => true;
+
+            if (!string.IsNullOrWhiteSpace(ValorFiltro))
+            {
+                if (filtro == "Concepto")
+                {
+                    string conceptoFiltro = ValorFiltro.ToLower();
+                    criterio = e => e.Concepto != null && e.Concepto.ToLower().Contains(conceptoFiltro);
+                }
+                else if (filtro == "Id" && int.TryParse(ValorFiltro, out int id))
+                {
+                    criterio = e => e.EntradaId == id;
+                }
+            }
+
+            var listaInicial = await EntradasService.Listar(criterio);
+
+            IEnumerable<Entradas> listaFiltrada = listaInicial;
+
+            if (fechaDesde.HasValue)
+            {
+                DateTime desde = fechaDesde.Value.Date;
+                listaFiltrada = listaFiltrada.Where(e => e.Fecha.Date >= desde);
+            }
+            if (fechaHasta.HasValue)
+            {
+                DateTime hasta = fechaHasta.Value.Date;
+                listaFiltrada = listaFiltrada.Where(e => e.Fecha.Date <= hasta);
+            }
+
+            Entradas = listaFiltrada.ToList();
+
+            Entradas = filtro == "Concepto"
+                ? Entradas.OrderBy(e => e.Concepto ?? "").ToList()
+                : Entradas.OrderBy(e => e.EntradaId).ToList();
+
+            conteo = Entradas.Count;
+            totalPeso = Entradas.Sum(e => e.PesoTotal);
+        }
+        catch (Exception ex)
+        {
+            Entradas = new List<Entradas>();
+            ToastService.ShowError($"Error al filtrar: {ex.Message}");
+        }
+    }
+}

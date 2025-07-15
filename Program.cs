@@ -11,7 +11,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddBlazoredToast();
-builder.Services.AddScoped<RegistrosService>();
+builder.Services.AddScoped<EntradasService>();
 
 var ConStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
