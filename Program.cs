@@ -12,6 +12,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddBlazoredToast();
 builder.Services.AddScoped<EntradasService>();
+builder.Services.AddScoped<ProductosService>();
 
 var ConStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
