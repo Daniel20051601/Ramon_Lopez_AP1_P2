@@ -1,0 +1,109 @@
+﻿@page "/Productos/Index"
+@rendermode InteractiveServer
+@inject ProductosService productosService
+
+<div class="container">
+    <div class="card shadow-lg">
+        <div class="card-header">
+            <h4 class="card-title text-center">Consulta de Productos</h4>
+        </div>
+
+        <div class="card-body ">
+            <div class="row">
+                <div class="col-3">
+                    <label class="col-form-label"><strong> Filtrar por</strong></label>
+                </div>
+                <div class="col text-end">
+                    <a href="/Productos/Create" class="btn btn-success">
+                        <span class="bi bi-plus-square"></span> Crear
+                    </a>
+                </div>
+            </div>
+
+            <div class="row align-items-center mb-3">
+                <div class="col-3">
+                    <InputSelect class="form-select" @bind-Value="filtro">
+                        <option value="Id">Producto Id</option>
+                        <option value="Descripcion">Descripcion</option>
+                    </InputSelect>
+                </div>
+                <div class="col-4">
+                    <div class="input-group">
+                        <input class="form-control"
+                               placeholder="Buscar" @bind-value="ValorFiltro" />
+                        <button type="button" class="btn btn-primary" @onclick="FiltrarProductos">
+                            <i class="bi bi-search me-1"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <table class="table table-hover">
+                <thead class="table table-striped text-black">
+                    <tr>
+                        <th>Producto Id</th>
+                        <th>Descripci&oacute;n</th>
+                        <th>Peso</th>
+                        <th>Existencia</th>
+                        <th>Compuesto</th>
+                        <th>Editar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in productos)
+                    {
+                        <tr>
+                            <td>@p.ProductoId</td>
+                            <td>@p.Descripcion</td>
+                            <td>@p.Peso</td>
+                            <td>@p.Existencia</td>
+                            <td>@p.EsCompuesto</td>
+                            <td>
+                                <a href="/Productos/Edit/@p.ProductoId" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    public List<Productos> productos = new List<Productos>();
+
+    private string filtro = "Id";
+    private string ValorFiltro { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        productos = (await productosService.Listar(p => true))
+            .OrderBy(p => p.ProductoId)
+            .ToList();
+    }
+
+    private async Task FiltrarProductos()
+    {
+        if (filtro == "Descripcion")
+        {
+            productos = await productosService.Listar(
+            p => p.Descripcion != null && p.Descripcion.ToLower().Contains(ValorFiltro.ToLower())
+        );
+        }
+        else if (filtro == "Id" && int.TryParse(ValorFiltro, out int id))
+        {
+            productos = (await productosService.Listar(p => p.ProductoId == id))
+                .OrderBy(p => p.ProductoId)
+                .ToList();
+        }
+
+        if (string.IsNullOrWhiteSpace(ValorFiltro))
+        {
+            productos = (await productosService.Listar(p => true))
+            .OrderBy(p => p.ProductoId)
+            .ToList();
+        }
+    }
+}
