@@ -36,6 +36,30 @@ public class ProductosService(IDbContextFactory<Contexto> DbContext)
             return await Insertar(producto);
     }
 
+    public async Task<bool> ReducirExistencia(int productoId, decimal cantidad)
+    {
+        await using var contexto = await DbContext.CreateDbContextAsync();
+        var producto = await contexto.Productos.FindAsync(productoId);
+        
+        if (producto == null || producto.Existencia < cantidad)
+            return false;
+        producto.Existencia -= cantidad;
+        contexto.Productos.Update(producto);
+        return await contexto.SaveChangesAsync() > 0;
+    }
+
+    public async Task<bool> AumentarExistencia(int productoId, decimal cantidad)
+    {
+        await using var contexto = await DbContext.CreateDbContextAsync();
+        var producto = await contexto.Productos.FindAsync(productoId);
+        
+        if (producto == null)
+            return false;
+        producto.Existencia += cantidad;
+        contexto.Productos.Update(producto);
+        return await contexto.SaveChangesAsync() > 0;
+    }
+
     public async Task<Productos?> Buscar(int productoId)
     {
         await using var contexto = await DbContext.CreateDbContextAsync();
