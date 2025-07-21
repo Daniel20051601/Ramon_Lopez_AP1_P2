@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 @inject IToastService ToastService
 @inject EntradasService EntradasService
+@inject ProductosService ProductosService
 
 <PageTitle>Editar Entrada</PageTitle>
 
@@ -29,7 +30,7 @@
                     <ValidationMessage For="@(() => Entrada.Concepto)" class="text-danger" />
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Peso Total</label>
+                    <label class="form-label">Peso Total (kg)</label>
                     <input class="form-control" value="@Entrada.PesoTotal.ToString("N2")" disabled />
                 </div>
 
@@ -78,8 +79,8 @@
                                     <tr>
                                         <td>@producto?.Descripcion</td>
                                         <td>@detalle.Cantidad</td>
-                                        <td>@producto?.Peso.ToString("N2") kg</td>
-                                        <td>@(((producto?.Peso ?? 0) * detalle.Cantidad).ToString("N2")) kg</td>
+                                        <td>@producto?.Peso.ToString("N2") g</td>
+                                        <td>@(((producto?.Peso ?? 0) * detalle.Cantidad).ToString("N2")) g</td>
                                         <td>
                                             <button class="btn btn-outline-danger" type="button" @onclick="() => EliminarDetalle(detalle)">
                                                 <i class="bi bi-trash"></i>
@@ -90,6 +91,38 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <div class="mt-4 border border-success p-2">
+                    <label class="form-label">Producidos</label>
+                    <div class="row mt-1">
+                        <div class="col-4">
+                            <small>Producto</small>
+                        </div>
+                        <div class="col-3">
+                            <small>Cantidad</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-4">
+                            <InputSelect class="form-select" @bind-Value="ProductoProducido">
+                                <option value="0">Seleccione un producto</option>
+                                @foreach (var detalle in Entrada.EntradasDetalle)
+                                {
+                                    var producto = Productos.FirstOrDefault(p => p.ProductoId == detalle.ProductoId);
+                                    if (producto != null)
+                                    {
+                                        <option value="@producto.ProductoId">@producto.Descripcion</option>
+                                    }
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-3">
+                            <InputNumber class="form-control" @bind-Value="CantidadProducida" />
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-center">
@@ -140,6 +173,9 @@
     public int productoSeleccionado { get; set; }
     public int CantidadSeleccionada { get; set; } = 1;
 
+    public int CantidadProducida { get; set; } = 1;
+    public int ProductoProducido { get; set; } = 0;
+
     public bool mostrarModalEliminar = false;
 
     protected override async Task OnInitializedAsync()
@@ -156,12 +192,17 @@
         if (Entrada.EntradasDetalle == null)
             Entrada.EntradasDetalle = new List<EntradasDetalle>();
 
+        ProductoProducido = Entrada.IdProducido;
+        CantidadProducida = Entrada.CantidadProducida;
+
         CalcularPesoTotal();
     }
 
     public async Task Guardar()
     {
         Entrada.Fecha = DateTime.SpecifyKind(Entrada.Fecha, DateTimeKind.Utc);
+        Entrada.IdProducido = ProductoProducido;
+        Entrada.CantidadProducida = CantidadProducida;
 
         if (string.IsNullOrWhiteSpace(Entrada.Concepto))
         {
@@ -212,7 +253,8 @@
                 ProductoId = producto.ProductoId,
                 Cantidad = CantidadSeleccionada
             });
-            producto.Existencia -= CantidadSeleccionada;
+
+            _ = ReducirExistencia(producto.ProductoId, CantidadSeleccionada);
 
             CalcularPesoTotal();
         }
@@ -222,6 +264,7 @@
 
     public void EliminarDetalle(EntradasDetalle detalle)
     {
+        _ = AumentarExistencia(detalle.ProductoId, detalle.Cantidad);
         var producto = Productos.FirstOrDefault(p => p.ProductoId == detalle.ProductoId);
         if (producto != null)
         {
@@ -233,6 +276,10 @@
 
     public async Task EliminarEntrada()
     {
+        foreach (var detalle in Entrada.EntradasDetalle)
+        {
+            _ = AumentarExistencia(detalle.ProductoId, detalle.Cantidad);
+        }
         var resultado = await EntradasService.Eliminar(Entrada.EntradaId);
         mostrarModalEliminar = false;
         if (resultado)
@@ -244,6 +291,7 @@
         {
             ToastService.ShowError("Ocurrió un error al eliminar la entrada.");
         }
+
     }
 
     private void CalcularPesoTotal()
@@ -251,7 +299,18 @@
         Entrada.PesoTotal = Entrada.EntradasDetalle.Sum(d =>
         {
             var producto = Productos.FirstOrDefault(p => p.ProductoId == d.ProductoId);
-            return (producto?.Peso ?? 0) * d.Cantidad;
+            return ((producto?.Peso ?? 0) * d.Cantidad)/1000;
         });
     }
+
+    public async Task<bool> ReducirExistencia(int productoId, int cantidad)
+    {
+        return await ProductosService.ReducirExistencia(productoId, cantidad);
+    }
+
+    public async Task<bool> AumentarExistencia(int productoId, int cantidad)
+    {
+        return await ProductosService.AumentarExistencia(productoId, cantidad);
+    }
+
 }
